@@ -15,10 +15,10 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="LandmarkTracking.h">
+    <ClInclude Include="mtcnn.h">
       <Filter>头文件</Filter>
     </ClInclude>
-    <ClInclude Include="mtcnn.h">
+    <ClInclude Include="LandmarkTracking.h">
       <Filter>头文件</Filter>
     </ClInclude>
   </ItemGroup>

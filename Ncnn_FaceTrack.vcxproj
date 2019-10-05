@@ -146,8 +146,8 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="LandmarkTracking.h" />
     <ClInclude Include="mtcnn.h" />
+    <ClInclude Include="LandmarkTracking.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
