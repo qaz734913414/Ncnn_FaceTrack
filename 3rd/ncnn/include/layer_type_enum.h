@@ -64,4 +64,7 @@ Dequantize = 58,
 Yolov3DetectionOutput = 59,
 PSROIPooling = 60,
 ROIAlign = 61,
+Packing = 62,
+Requantize = 63,
+Cast = 64,
 
