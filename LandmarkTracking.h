@@ -122,7 +122,10 @@ public:
 	void detecting(cv::Mat* image) {
 		ncnn::Mat ncnn_img = ncnn::Mat::from_pixels(image->data, ncnn::Mat::PIXEL_BGR2RGB, image->cols, image->rows);
 		std::vector<Bbox> finalBbox;
-		detector->detect(ncnn_img, finalBbox);
+		if(isMaxFace)
+			detector->detectMaxFace(ncnn_img, finalBbox);
+		else
+			detector->detect(ncnn_img, finalBbox);
 		const int num_box = finalBbox.size();
 		std::vector<cv::Rect> bbox;
 		bbox.resize(num_box);
@@ -150,7 +153,7 @@ public:
 		cv::Size lowDpSize(ImageHighDP.cols / downSimpilingFactor, ImageHighDP.rows / downSimpilingFactor);
 		cv::resize(image, ImageLowDP, lowDpSize);
 		trackingID = 0;
-		detection_Interval = 350; //detect faces every 200 ms
+		detection_Interval = 200; //detect faces every 200 ms
 		detecting(&image);
 		stabilization = false;
 		UI_height = image.rows;
@@ -203,7 +206,7 @@ public:
 	{
 		cv::Rect faceROI = face.face_location.convert_cv_rect(image.rows, image.cols);
 		cv::Mat faceROI_Image;
-		tracking_corrfilter(image, face.frame_face_prev, faceROI, 2);
+		tracking_corrfilter(image, face.frame_face_prev, faceROI, tpm_scale);
 		image(faceROI).copyTo(faceROI_Image);
 
 		cv::Rect bdbox;
@@ -239,7 +242,7 @@ public:
 		float sim = detector->rnet(rnet_data);
 
 		face.isCanShow = true;
-		if (sim > 0.1) {
+		if (sim > 0.9) {
 			//stablize
 			float diff_x = 0;
 			float diff_y = 0;
@@ -278,6 +281,15 @@ public:
 			else {
 				iter++;
 			}
+		}
+
+		if (trackingFace.size() <= 0)
+		{
+			detection_Interval = 200;
+		}
+		else
+		{
+			detection_Interval = 1000;
 		}
 
 		if (detection_Time < 0)
@@ -326,11 +338,9 @@ private:
 	bool candidateFaces_lock;
 	double detection_Time;
 	double detection_Interval;
-	float stable_factor_stage1 = 0.2f;
-	float stable_factor_stage2 = 2.0f;
 	int trackingID;
 	bool stabilization;
-
-
+	int tpm_scale = 4;
+	bool isMaxFace = true;
 };
 #endif //ZEUSEESFACETRACKING_H
