@@ -311,6 +311,32 @@ void MTCNN::RNet(){
 		}
     }
 }
+
+/*
+float MTCNN::rnet(const ncnn::Mat& img, Shape::Rect<float>& face_) {
+	Bbox face;
+	face.x1 = face_.x;
+	face.y1 = face_.y;
+	face.x2 = face_.x + face_.width;
+	face.y2 = face_.y + face_.height;
+
+	img_w = img.w;
+	img_h = img.h;
+	ncnn::Mat tempIm;
+	copy_cut_border(img, tempIm, face.y1, img_h - face.y2, face.x1, img_w - face.x2);
+	ncnn::Mat in;
+	resize_bilinear(tempIm, in, 24, 24);
+	in.substract_mean_normalize(mean_vals, norm_vals);
+	ncnn::Extractor ex = Rnet.create_extractor();
+
+	ex.set_light_mode(true);
+	ex.input("data", in);
+	ncnn::Mat score;
+	ex.extract("prob1", score);
+	return (float)score[1];
+}
+*/
+
 void MTCNN::ONet(){
     thirdBbox_.clear();
     for(vector<Bbox>::iterator it=secondBbox_.begin(); it!=secondBbox_.end();it++){
@@ -369,6 +395,8 @@ void MTCNN::detect(ncnn::Mat& img_, vector<Bbox>& finalBbox_){
     refine(thirdBbox_, img_h, img_w, true);
     nms(thirdBbox_, nms_threshold[2], "Min");
     finalBbox_ = thirdBbox_;
+	if (smooth)
+		SmoothBbox(finalBbox_);
 }
 
 
@@ -442,9 +470,61 @@ void MTCNN::detectMaxFace(ncnn::Mat& img_, vector<Bbox>& finalBbox) {
 		if (thirdBbox_.size() > 0) {
 			extractMaxFace(thirdBbox_);
 			finalBbox = thirdBbox_;//if largest face size is similar,.
+			if (smooth)
+				SmoothBbox(finalBbox);
 			break;
 		}
 	}
+
+}
+
+float MTCNN::iou(Bbox & b1, Bbox & b2, string modelname)
+{
+	float IOU = 0;
+	float maxX = 0;
+	float maxY = 0;
+	float minX = 0;
+	float minY = 0;
+	maxX = max(b1.x1, b2.x1);
+	maxY = max(b1.y1, b2.y1);
+	minX = min(b1.x2, b2.x2);
+	minY = min(b1.y2, b2.y2);
+	//maxX1 and maxY1 reuse
+	maxX = ((minX - maxX + 1)>0) ? (minX - maxX + 1) : 0;
+	maxY = ((minY - maxY + 1)>0) ? (minY - maxY + 1) : 0;
+	IOU = maxX * maxY;
+
+	if (!modelname.compare("Union"))
+		IOU = IOU / (b1.area + b2.area - IOU);
+	else if (!modelname.compare("Min")) {
+		IOU = IOU / ((b1.area < b2.area) ? b1.area : b2.area);
+	}
+	return IOU;
+}
+
+void MTCNN::SmoothBbox(std::vector<Bbox>& finalBbox)
+{
+	static std::vector<Bbox> preBbox_;
+	for (int i = 0; i < finalBbox.size(); i++) {
+		for (int j = 0; j < preBbox_.size(); j++) {
+			if (iou(finalBbox[i], preBbox_[j]) > 0.90)
+			{
+				finalBbox[i] = preBbox_[j];
+			}
+			else if (iou(finalBbox[i], preBbox_[j]) > 0.6) {
+				finalBbox[i].x1 = (finalBbox[i].x1 + preBbox_[j].x1) / 2;
+				finalBbox[i].y1 = (finalBbox[i].y1 + preBbox_[j].y1) / 2;
+				finalBbox[i].x2 = (finalBbox[i].x2 + preBbox_[j].x2) / 2;
+				finalBbox[i].y2 = (finalBbox[i].y2 + preBbox_[j].y2) / 2;
+				//finalBbox[i].area = (finalBbox[i].x2 - finalBbox[i].x1)*(finalBbox[i].y2 - finalBbox[i].y1);
+				for (int k = 0; k < 10; k++)
+				{
+					finalBbox[i].ppoint[k] = (finalBbox[i].ppoint[k] + preBbox_[j].ppoint[k]) / 2;
+				}
+			}
+		}
+	}
+	preBbox_ = finalBbox;
 
 }
 

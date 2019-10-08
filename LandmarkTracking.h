@@ -1,10 +1,9 @@
 #ifndef ZEUSEESFACETRACKING_H
 #define ZEUSEESFACETRACKING_H
 #include <opencv2/opencv.hpp>
-#include <thread>
+//#include <thread>
 #include "mtcnn.h"
 #include "time.h"
-
 
 namespace Shape {
 
@@ -33,84 +32,6 @@ namespace Shape {
 }
 
 
-#define WITH_ATT 0
-static int HeadPosePointIndexs[] = { 94,59,27,20,69,45,50 };
-int* estimateHeadPosePointIndexs = HeadPosePointIndexs;
-
-
-static float estimateHeadPose2dArray[] = {
-	-0.208764,-0.140359,0.458815,0.106082,0.00859783,-0.0866249,-0.443304,-0.00551231,-0.0697294,
-	-0.157724,-0.173532,0.16253,0.0935172,-0.0280447,0.016427,-0.162489,-0.0468956,-0.102772,
-	0.126487,-0.164141,0.184245,0.101047,0.0104349,-0.0243688,-0.183127,0.0267416,0.117526,
-	0.201744,-0.051405,0.498323,0.0341851,-0.0126043,0.0578142,-0.490372,0.0244975,0.0670094,
-	0.0244522,-0.211899,-1.73645,0.0873952,0.00189387,0.0850161,1.72599,0.00521321,0.0315345,
-	-0.122839,0.405878,0.28964,-0.23045,0.0212364,-0.0533548,-0.290354,0.0718529,-0.176586,
-	0.136662,0.335455,0.142905,-0.191773,-0.00149495,0.00509046,-0.156346,-0.0759126,0.133053,
-	-0.0393198,0.307292,0.185202,-0.446933,-0.0789959,0.29604,-0.190589,-0.407886,0.0269739,
-	-0.00319206,0.141906,0.143748,-0.194121,-0.0809829,0.0443648,-0.157001,-0.0928255,0.0334674,
-	-0.0155408,-0.145267,-0.146458,0.205672,-0.111508,0.0481617,0.142516,-0.0820573,0.0329081,
-	-0.0520549,-0.329935,-0.231104,0.451872,-0.140248,0.294419,0.223746,-0.381816,0.0223632,
-	0.176198,-0.00558382,0.0509544,0.0258391,0.050704,-1.10825,-0.0198969,1.1124,0.189531,
-	-0.0352285,0.163014,0.0842186,-0.24742,0.199899,0.228204,-0.0721214,-0.0561584,-0.157876,
-	-0.0308544,-0.131422,-0.0865534,0.205083,0.161144,0.197055,0.0733392,-0.0916629,-0.147355,
-	0.527424,-0.0592165,0.0150818,0.0603236,0.640014,-0.0714241,-0.0199933,-0.261328,0.891053 };
-
-
-cv::Mat estimateHeadPoseMat = cv::Mat(15, 9, CV_32FC1, estimateHeadPose2dArray);
-static float estimateHeadPose2dArray2[] = {
-	0.139791,27.4028,7.02636,
-	-2.48207,9.59384,6.03758,
-	1.27402,10.4795,6.20801,
-	1.17406,29.1886,1.67768,
-	0.306761,-103.832,5.66238,
-	4.78663,17.8726,-15.3623,
-	-5.20016,9.29488,-11.2495,
-	-25.1704,10.8649,-29.4877,
-	-5.62572,9.0871,-12.0982,
-	-5.19707,-8.25251,13.3965,
-	-23.6643,-13.1348,29.4322,
-	67.239,0.666896,1.84304,
-	-2.83223,4.56333,-15.885,
-	-4.74948,-3.79454,12.7986,
-	-16.1,1.47175,4.03941 };
-cv::Mat estimateHeadPoseMat2 = cv::Mat(15, 3, CV_32FC1, estimateHeadPose2dArray2);
-
-
-
-
-void EstimateHeadPose(std::vector<cv::Point>& current_shape, cv::Vec3d& eav) {
-	if (current_shape.empty())
-		return;
-	static const int samplePdim = 7;
-	float miny = 10000000000.0f;
-	float maxy = 0.0f;
-	float sumx = 0.0f;
-	float sumy = 0.0f;
-	for (int i = 0; i < samplePdim; i++) {
-		sumx += current_shape[i].x;
-		float y = current_shape[i].y;
-		sumy += y;
-		if (miny > y)
-			miny = y;
-		if (maxy < y)
-			maxy = y;
-	}
-	float dist = maxy - miny;
-	sumx = sumx / samplePdim;
-	sumy = sumy / samplePdim;
-	static cv::Mat tmp(1, 2 * samplePdim + 1, CV_32FC1);
-	for (int i = 0; i < samplePdim; i++) {
-		tmp.at<float>(i) = (current_shape[estimateHeadPosePointIndexs[i]].x - sumx) / dist;
-		tmp.at<float>(i + samplePdim) = (current_shape[estimateHeadPosePointIndexs[i]].y - sumy) / dist;
-
-	}
-	tmp.at<float>(2 * samplePdim) = 1.0f;
-	cv::Mat predict = tmp * estimateHeadPoseMat2;
-	eav[0] = predict.at<float>(0);
-	eav[1] = predict.at<float>(1);
-	eav[2] = predict.at<float>(2);
-	return;
-}
 
 cv::Rect boundingRect(const std::vector<cv::Point>& pts) {
 	if (pts.size() > 1)
@@ -144,11 +65,11 @@ public:
 
 	Face(int instance_id, Shape::Rect<float> rect) {
 		face_id = instance_id;
-		landmark = std::shared_ptr<vector<cv::Point> >(new vector<cv::Point>(106));
-		//        landmark_prev = std::shared_ptr<vector<cv::Point> >(new vector<cv::Point>(106));
+		landmark = std::shared_ptr<vector<cv::Point> >(new vector<cv::Point>(5));
+
 		face_location = rect;
 		isCanShow = false; //追踪一次后待框稳定后即可显示
-		for (int i = 0; i < 106; i++)
+		for (int i = 0; i < 5; i++)
 		{
 			(*landmark)[i].x = -1;
 			(*landmark)[i].y = -1;
@@ -157,26 +78,18 @@ public:
 
 	Face() {
 
-		landmark = std::shared_ptr<vector<cv::Point> >(new vector<cv::Point>(106));
+		landmark = std::shared_ptr<vector<cv::Point> >(new vector<cv::Point>(5));
 		isCanShow = false; //追踪一次后待框稳定后即可显示
 	}
 
 	std::shared_ptr<vector<cv::Point> > landmark;
-	int landmark_prev[212];
+
 	int face_id = -1;
 	long frameId = 0;
 	int ptr_num = 0;
-	int ptr_eye_state = 0;
 
 	Shape::Rect<float> face_location;
 	bool isCanShow;
-	bool stateMonth;
-	bool stateEye;
-	bool stateRise;
-	bool stateShake;
-	double eulerAngle[3];
-	bool state_left[20] = { false };
-	bool state_right[20] = { false };
 	cv::Mat frame_face_prev;
 
 	static cv::Rect SquarePadding(cv::Rect facebox, int margin_rows, int margin_cols, bool max)
@@ -218,6 +131,53 @@ public:
 
 
 };
+
+
+float r_iou(Face & f1, Face & f2)
+{
+	float IOU = 0;
+	float maxX = 0;
+	float maxY = 0;
+	float minX = 0;
+	float minY = 0;
+	cv::Rect b1 = cv::boundingRect(*f1.landmark);
+	cv::Rect b2 = cv::boundingRect(*f2.landmark);
+	maxX = max(b1.x, b2.x);
+	maxY = max(b1.y, b2.y);
+	minX = min(b1.x + b1.width, b2.x + b2.width);
+	minY = min(b1.y + b1.height, b2.y + b2.height);
+	//maxX1 and maxY1 reuse
+	maxX = ((minX - maxX + 1)>0) ? (minX - maxX + 1) : 0;
+	maxY = ((minY - maxY + 1)>0) ? (minY - maxY + 1) : 0;
+	IOU = maxX * maxY;
+	IOU = IOU / (b1.area() + b2.area() - IOU);
+
+	return IOU;
+}
+
+//稳定框 暂时有bug
+void SmoothBbox(std::vector<Face>& finalBbox)
+{
+	static std::vector<Face> preBbox_;
+	for (int i = 0; i < finalBbox.size(); i++) {
+		for (int j = 0; j < preBbox_.size(); j++) {
+			if (r_iou(finalBbox[i], preBbox_[j]) > 0.90)
+			{
+				finalBbox[i] = preBbox_[j];
+			}
+			else if (r_iou(finalBbox[i], preBbox_[j]) > 0.6) {
+				(*finalBbox[i].landmark)[0].x = ((*finalBbox[i].landmark)[0].x + (*preBbox_[i].landmark)[0].x) / 2;
+				(*finalBbox[i].landmark)[0].y = ((*finalBbox[i].landmark)[0].y + (*preBbox_[i].landmark)[0].y) / 2;
+				(*finalBbox[i].landmark)[1].x = ((*finalBbox[i].landmark)[1].x + (*preBbox_[i].landmark)[1].x) / 2;
+				(*finalBbox[i].landmark)[1].y = ((*finalBbox[i].landmark)[1].y + (*preBbox_[i].landmark)[1].y) / 2;
+				
+			}
+		}
+	}
+	preBbox_ = finalBbox;
+
+}
+
 class FaceTracking {
 public:
 	FaceTracking(string modelPath)
@@ -268,7 +228,7 @@ public:
 		trackingID = 0;
 		detection_Interval = 350; //detect faces every 200 ms
 		detecting(&image);
-		stabilization = 0;
+		stabilization = false;
 		UI_height = image.rows;
 		UI_width = image.cols;
 	}
@@ -314,27 +274,6 @@ public:
 
 	}
 
-	void doingLandmark_112(cv::Mat& face, std::vector<cv::Point>& pts, int zeroadd_x, int zeroadd_y, int stable_state = 0) {
-		//ncnn::Mat in = ncnn::Mat::from_pixels_resize(face.data, ncnn::Mat::PIXEL_BGR, face.cols, face.rows, 80, 80);
-		ncnn::Mat in = ncnn::Mat::from_pixels_resize(face.data, ncnn::Mat::PIXEL_BGR, face.cols, face.rows, 112, 112);
-		const float mean_vals[3] = { 127.5f, 127.5f, 127.5f };
-		const float norm_vals[3] = { 1.0 / 127.5, 1.0 / 127.5, 1.0 / 127.5 };
-		in.substract_mean_normalize(mean_vals, norm_vals);
-		ncnn::Extractor frNet = net_landmark_.create_extractor();
-		frNet.set_num_threads(2);
-		// frNet.set_light_mode(true);
-		frNet.input("data", in);
-		ncnn::Mat out;
-		frNet.extract("prelu1", out);
-
-		for (int j = 0; j < 106; j++) {
-			int x = static_cast<int>(out[j * 2 + 0] * face.cols) + zeroadd_x;
-			int y = static_cast<int>(out[j * 2 + 1] * face.rows) + zeroadd_y;
-			cv::Point p(x, y);
-			pts[j] = p;
-		}
-
-	}
 
 	void tracking_corrfilter(const cv::Mat& frame, const cv::Mat& model, cv::Rect& trackBox, float scale)
 	{
@@ -377,12 +316,12 @@ public:
 		cv::Mat faceROI_Image;
 		tracking_corrfilter(image, face.frame_face_prev, faceROI, 2);
 		image(faceROI).copyTo(faceROI_Image);
-		clock_t start_time = clock();
+		//clock_t start_time = clock();
 		(*face.landmark).resize(2);
 		doingLandmark_onet(faceROI_Image, *face.landmark, faceROI.x, faceROI.y, face.frameId > 1);
-		//doingLandmark_112(faceROI_Image,*face.landmark,faceROI.x,faceROI.y,face.frameId>1);
-		clock_t finish_time = clock();
-		double total_time = (double)(finish_time - start_time) / CLOCKS_PER_SEC;
+
+		//clock_t finish_time = clock();
+		//double total_time = (double)(finish_time - start_time) / CLOCKS_PER_SEC;
 		cv::Rect bdbox((*face.landmark)[0].x, (*face.landmark)[0].y, (*face.landmark)[1].x - (*face.landmark)[0].x, (*face.landmark)[1].y - (*face.landmark)[0].y);
 		// cv::Rect bdbox = cv::boundingRect((*face.landmark));
 		// bdbox = Face::SquarePadding(bdbox, static_cast<int>(bdbox.height*0.55));
@@ -400,6 +339,7 @@ public:
 
 		face.face_location = boxfloat;
 		faceROI = face.face_location.convert_cv_rect(image.rows, image.cols);
+
 		image(faceROI).copyTo(face.frame_face_prev);
 		face.frameId += 1;
 		ncnn::Extractor Rnet = detector->Rnet.create_extractor();
@@ -432,7 +372,7 @@ public:
 	void update(cv::Mat& image)
 	{
 		ImageHighDP = image;
-		std::cout << trackingFace.size() << std::endl;
+		//std::cout << trackingFace.size() << std::endl;
 		if (candidateFaces.size() > 0 && !candidateFaces_lock)
 		{
 			for (int i = 0; i < candidateFaces.size(); i++)
@@ -451,6 +391,8 @@ public:
 				iter++;
 			}
 		}
+		if(stabilization)
+			SmoothBbox(trackingFace);
 
 		if (detection_Time < 0)
 		{
@@ -486,8 +428,6 @@ public:
 
 private:
 
-	// float template_face[];
-	// 姿态角估计
 	int isLostDetection;
 	int isTracking;
 	int isDetection;
@@ -500,11 +440,8 @@ private:
 	bool candidateFaces_lock;
 	double detection_Time;
 	double detection_Interval;
-	ncnn::Net net_landmark_;
-	ncnn::Net net_eye_classifier;
 	float stable_factor_stage1 = 0.2f;
 	float stable_factor_stage2 = 2.0f;
-
 	int trackingID;
 	bool stabilization;
 

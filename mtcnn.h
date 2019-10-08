@@ -10,7 +10,7 @@
 #include <map>
 #include <iostream>
 using namespace std;
-//using namespace cv;
+
 struct Bbox
 {
     float score;
@@ -34,6 +34,8 @@ public:
 	void SetMinFace(int minSize);
     void detect(ncnn::Mat& img_, std::vector<Bbox>& finalBbox);
 	void detectMaxFace(ncnn::Mat& img_, std::vector<Bbox>& finalBbox);
+	//float rnet(const ncnn::Mat& img, Shape::Rect<float>& face_);
+
     ncnn::Net Pnet, Rnet, Onet;
 
 
@@ -44,7 +46,8 @@ private:
     void nms(vector<Bbox> &boundingBox_, const float overlap_threshold, string modelname="Union");
     void refine(vector<Bbox> &vecBbox, const int &height, const int &width, bool square);
 	void extractMaxFace(vector<Bbox> &boundingBox_);
-
+	float iou(Bbox & b1, Bbox & b2, string modelname = "Union");
+	void SmoothBbox(std::vector<Bbox>& winList);
 	void PNet(float scale);
     void PNet();
     void RNet();
@@ -61,10 +64,10 @@ private:
     int img_w, img_h;
 
 private:
-	const float threshold[3] = { 0.8f, 0.8f, 0.6f };
+	const float threshold[3] = { 0.8f, 0.8f, 0.9f };
 	int minsize = 80;
-	const float pre_facetor = 0.6090f;
-	
+	const float pre_facetor = 0.7090f;
+	bool smooth = true;//Œ»∂®–‘
 };
 
 

@@ -1,12 +1,106 @@
 #include "LandmarkTracking.h"
 
+
+#ifdef CV_CXX11
+#include <mutex>
+#include <thread>
+#include <queue>
+#endif
+
+
+#ifdef CV_CXX11
+template <typename T>
+class QueueFPS : public std::queue<T>
+{
+public:
+	QueueFPS() : counter(0) {}
+
+	void push(const T& entry)
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+
+		std::queue<T>::push(entry);
+		counter += 1;
+		if (counter == 1)
+		{
+			// Start counting from a second frame (warmup).
+			tm.reset();
+			tm.start();
+		}
+	}
+
+	T get()
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		T entry = this->front();
+		this->pop();
+		return entry;
+	}
+
+	float getFPS()
+	{
+		tm.stop();
+		double fps = counter / tm.getTimeSec();
+		tm.start();
+		return static_cast<float>(fps);
+	}
+
+	void clear()
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		while (!this->empty())
+			this->pop();
+	}
+
+	unsigned int counter;
+
+private:
+	cv::TickMeter tm;
+	std::mutex mutex;
+};
+
+template <typename T>
+class Queue : public std::queue<T>
+{
+public:
+	Queue(){}
+
+	void push(const T& entry)
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		std::queue<T>::push(entry);
+		
+	}
+
+	T get()
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		T entry = this->front();
+		this->pop();
+		return entry;
+	}
+
+	void clear()
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		while (!this->empty())
+			this->pop();
+	}
+
+private:
+
+	std::mutex mutex;
+};
+#endif  // CV_CXX11
+
 int main()
 {
+
 	string model_path = "./models";
 	FaceTracking faceTrack(model_path);
 	cv::Mat frame;
-	cv::VideoCapture capture(0);
-	if (!capture.isOpened())
+	cv::VideoCapture cap(0);
+	if (!cap.isOpened())
 	{
 		return -1;
 	}
@@ -16,19 +110,126 @@ int main()
 	vector<cv::Scalar> Colors;
 	cv::Scalar color;
 	srand((unsigned int)time(0));//初始化种子为随机值
+	Queue<cv::Mat> framesQueue;
+	std::vector<Face> faces;
+
+#ifdef CV_CXX11
+	bool process = true;
+
+	Queue<std::vector<Face> > predictionsQueue;
+	std::thread processingThread([&]() {
+		//std::queue<AsyncArray> futureOutputs;
+		cv::Mat blob;
+		for (;process;)
+		{
+			// Get a next frame
+			cv::Mat frame;
+			{
+				if (!framesQueue.empty())
+				{
+					frame = framesQueue.get();
+					framesQueue.clear();  // Skip the rest of frames
+				}
+			}
+
+			// Process the frame
+			if (!frame.empty())
+			{
+				double t1 = (double)cv::getTickCount();
+				if (frameIndex == 0)
+				{
+					faceTrack.Init(frame);
+					frameIndex = 1;
+				}
+				else {
+					faceTrack.update(frame);
+				}
+				printf("total %gms\n", ((double)cv::getTickCount() - t1) * 1000 / cv::getTickFrequency());
+				printf("------------------\n");
+				//Sleep(200);
+				predictionsQueue.push(faceTrack.trackingFace);
+			}
+
+			
+		}
+	});
 	for (;;) {
-		if (!capture.read(frame))
+		
+		if (!cap.read(frame))
+		{
+			break;
+		}
+
+		//cv::transpose(frame, frame);
+		//cv::flip(frame, frame, -1);
+		//cv::flip(frame, frame, 1);
+
+		framesQueue.push(frame.clone());
+
+		if (!predictionsQueue.empty())
+		{
+			
+			faces.clear();
+			faces = predictionsQueue.get();
+
+			
+
+			for (int i = 0; i < faces.size(); i++)
+			{
+				const Face &info = faces[i];
+				cv::Rect rect = cv::boundingRect(*info.landmark);
+				//Shape::Rect<float> frect = info.face_location;
+				bool isExist = false;
+				for (int j = 0; j < IDs.size(); j++)
+				{
+					if (IDs[j] == info.face_id)
+					{
+						color = Colors[j];
+						isExist = true;
+						break;
+					}
+				}
+
+				if (!isExist)
+				{
+					IDs.push_back(info.face_id);
+					int r = rand() % 255 + 1;
+					int g = rand() % 255 + 1;
+					int b = rand() % 255 + 1;
+					color = cv::Scalar(r, g, b);
+					Colors.push_back(color);
+				}
+
+				rectangle(frame, rect, color, 2);
+			}
+			
+		}
+
+		
+		imshow("frame", frame);
+
+		int q = cv::waitKey(30);
+		if (q == 27) break;
+	}
+
+	process = false;
+	processingThread.join();
+
+#else  // CV_CXX11
+	for (;;) {
+		if (!cap.read(frame))
 		{
 			break;
 		}
 		int q = cv::waitKey(1);
 		if (q == 27) break;
 
-		
+
 		//cv::transpose(frame, frame);
 		//cv::flip(frame, frame, -1);
 		//cv::flip(frame, frame, 1);
 		double t1 = (double)cv::getTickCount();
+
 		if (frameIndex == 0)
 		{
 			faceTrack.Init(frame);
@@ -71,9 +272,10 @@ int main()
 		}
 		imshow("frame", frame);
 	}
+#endif  // CV_CXX11
 	IDs.clear();
 	Colors.clear();
-	capture.release();
+	cap.release();
 	cv::destroyAllWindows();
 	return 0;
 }
