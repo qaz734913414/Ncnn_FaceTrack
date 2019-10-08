@@ -177,8 +177,12 @@ int main()
 			for (int i = 0; i < faces.size(); i++)
 			{
 				const Face &info = faces[i];
-				cv::Rect rect = cv::boundingRect(*info.landmark);
-				//Shape::Rect<float> frect = info.face_location;
+				cv::Rect rect;
+				rect.x = info.faceBbox.x1;
+				rect.y = info.faceBbox.y1;
+				rect.width = info.faceBbox.x2 - info.faceBbox.x1;
+				rect.height = info.faceBbox.y2 - info.faceBbox.y1;
+				
 				bool isExist = false;
 				for (int j = 0; j < IDs.size(); j++)
 				{
@@ -200,7 +204,12 @@ int main()
 					Colors.push_back(color);
 				}
 
-				rectangle(frame, rect, color, 2);
+				cv::rectangle(frame, rect, color, 2);
+				for (int j = 0; j < 5; j++)
+				{
+					cv::Point p = cv::Point(info.faceBbox.ppoint[j], info.faceBbox.ppoint[j + 5]);
+					cv::circle(frame, p, 2, color,2);
+				}
 			}
 			
 		}
@@ -245,8 +254,12 @@ int main()
 		for (int i = 0; i < faceActions.size(); i++)
 		{
 			const Face &info = faceActions[i];
-			cv::Rect rect = cv::boundingRect(*info.landmark);
-			//Shape::Rect<float> frect = info.face_location;
+			cv::Rect rect;
+			rect.x = info.faceBbox.x1;
+			rect.y = info.faceBbox.y1;
+			rect.width = info.faceBbox.x2 - info.faceBbox.x1;
+			rect.height = info.faceBbox.y2 - info.faceBbox.y1;
+
 			bool isExist = false;
 			for (int j = 0; j < IDs.size(); j++)
 			{
@@ -269,6 +282,11 @@ int main()
 			}
 
 			rectangle(frame, rect, color, 2);
+			for (int j = 0; j < 5; j++)
+			{
+				cv::Point p = cv::Point(info.faceBbox.ppoint[j], info.faceBbox.ppoint[j + 5]);
+				cv::circle(frame, p, 2, color, 2);
+			}
 		}
 		imshow("frame", frame);
 	}

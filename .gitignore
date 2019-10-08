@@ -1,3 +1,5 @@
+Release
+
 # Prerequisites
 *.d
 
@@ -10,6 +12,8 @@
 # Precompiled Headers
 *.gch
 *.pch
+*.opendb
+*.db
 
 # Compiled Dynamic libraries
 *.so

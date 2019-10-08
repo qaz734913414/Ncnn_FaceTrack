@@ -312,30 +312,20 @@ void MTCNN::RNet(){
     }
 }
 
-/*
-float MTCNN::rnet(const ncnn::Mat& img, Shape::Rect<float>& face_) {
-	Bbox face;
-	face.x1 = face_.x;
-	face.y1 = face_.y;
-	face.x2 = face_.x + face_.width;
-	face.y2 = face_.y + face_.height;
 
-	img_w = img.w;
-	img_h = img.h;
-	ncnn::Mat tempIm;
-	copy_cut_border(img, tempIm, face.y1, img_h - face.y2, face.x1, img_w - face.x2);
-	ncnn::Mat in;
-	resize_bilinear(tempIm, in, 24, 24);
-	in.substract_mean_normalize(mean_vals, norm_vals);
+float MTCNN::rnet(ncnn::Mat& img) {
+
 	ncnn::Extractor ex = Rnet.create_extractor();
-
+	const float mean_vals[3] = { 127.5f, 127.5f, 127.5f };
+	const float norm_vals[3] = { 1.0 / 127.5, 1.0 / 127.5, 1.0 / 127.5 };
+	img.substract_mean_normalize(mean_vals, norm_vals);
 	ex.set_light_mode(true);
-	ex.input("data", in);
+	ex.input("data", img);
 	ncnn::Mat score;
 	ex.extract("prob1", score);
 	return (float)score[1];
 }
-*/
+
 
 void MTCNN::ONet(){
     thirdBbox_.clear();
@@ -367,6 +357,36 @@ void MTCNN::ONet(){
 		}
     }
 }
+
+Bbox MTCNN::onet(ncnn::Mat& img, int x, int y, int w, int h) {
+
+	Bbox faceBbox;
+	const float mean_vals[3] = { 127.5f, 127.5f, 127.5f };
+	const float norm_vals[3] = { 1.0 / 127.5, 1.0 / 127.5, 1.0 / 127.5 };
+	img.substract_mean_normalize(mean_vals, norm_vals);
+	ncnn::Extractor ex = Onet.create_extractor();
+
+	ex.set_light_mode(true);
+	ex.input("data", img);
+	ncnn::Mat score, bbox, keyPoint;
+	ex.extract("prob1", score);
+	ex.extract("conv6-2", bbox);
+	ex.extract("conv6-3", keyPoint);
+	faceBbox.score = score.channel(1)[0];
+	faceBbox.x1 = static_cast<int>(bbox[0] * w) + x;
+	faceBbox.y1 = static_cast<int>(bbox[1] * h) + y;
+	faceBbox.x2 = static_cast<int>(bbox[2] * w) + h + x;
+	faceBbox.y2 = static_cast<int>(bbox[3] * h) + h + y;
+	for (int num = 0; num<5; num++) {
+		(faceBbox.ppoint)[num] = x + w * keyPoint[num];
+		(faceBbox.ppoint)[num + 5] = y + h * keyPoint[num + 5];
+	}
+
+	return faceBbox;
+	
+}
+
+
 void MTCNN::detect(ncnn::Mat& img_, vector<Bbox>& finalBbox_){
     img = img_;
     img_w = img.w;
