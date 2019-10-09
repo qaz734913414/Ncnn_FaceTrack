@@ -41,13 +41,13 @@ public:
 		face_id = instance_id;
 
 		face_location = rect;
-		isCanShow = false; //×·×ÙÒ»´Îºó´ı¿òÎÈ¶¨ºó¼´¿ÉÏÔÊ¾
+		isCanShow = false; //è¿½è¸ªä¸€æ¬¡åå¾…æ¡†ç¨³å®šåå³å¯æ˜¾ç¤º
 		
 	}
 
 	Face() {
 
-		isCanShow = false; //×·×ÙÒ»´Îºó´ı¿òÎÈ¶¨ºó¼´¿ÉÏÔÊ¾
+		isCanShow = false; //è¿½è¸ªä¸€æ¬¡åå¾…æ¡†ç¨³å®šåå³å¯æ˜¾ç¤º
 	}
 
 	Bbox faceBbox;
@@ -276,7 +276,7 @@ public:
 		{
 			if (!tracking(image, *iter))
 			{
-				iter = trackingFace.erase(iter); //×·×ÙÊ§°Ü ÔòÉ¾³ı´ËÈËÁ³
+				iter = trackingFace.erase(iter); //è¿½è¸ªå¤±è´¥ åˆ™åˆ é™¤æ­¤äººè„¸
 			}
 			else {
 				iter++;
@@ -319,7 +319,7 @@ public:
 
 
 
-	vector<Face> trackingFace; //¸ú×ÙÖĞµÄÈËÁ³
+	vector<Face> trackingFace; //è·Ÿè¸ªä¸­çš„äººè„¸
 	int UI_width;
 	int UI_height;
 
@@ -334,13 +334,13 @@ private:
 	int downSimpilingFactor;
 	int faceMinSize;
 	MTCNN* detector;
-	vector<Face> candidateFaces; // ½«¼ì²âµ½µÄÈËÁ³·ÅÈë´ËÁĞ¶Ó ´ı¸ú×ÙµÄÈËÁ³
+	vector<Face> candidateFaces; // å°†æ£€æµ‹åˆ°çš„äººè„¸æ”¾å…¥æ­¤åˆ—é˜Ÿ å¾…è·Ÿè¸ªçš„äººè„¸
 	bool candidateFaces_lock;
 	double detection_Time;
 	double detection_Interval;
 	int trackingID;
 	bool stabilization;
-	int tpm_scale = 4;
+	int tpm_scale = 2;
 	bool isMaxFace = true;
 };
 #endif //ZEUSEESFACETRACKING_H
