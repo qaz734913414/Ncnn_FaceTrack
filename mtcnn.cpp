@@ -375,7 +375,7 @@ Bbox MTCNN::onet(ncnn::Mat& img, int x, int y, int w, int h) {
 	faceBbox.score = (float)score[1];
 	faceBbox.x1 = static_cast<int>(bbox[0] * w) + x;
 	faceBbox.y1 = static_cast<int>(bbox[1] * h) + y;
-	faceBbox.x2 = static_cast<int>(bbox[2] * w) + h + x;
+	faceBbox.x2 = static_cast<int>(bbox[2] * w) + w + x;
 	faceBbox.y2 = static_cast<int>(bbox[3] * h) + h + y;
 	for (int num = 0; num<5; num++) {
 		(faceBbox.ppoint)[num] = x + w * keyPoint[num];
