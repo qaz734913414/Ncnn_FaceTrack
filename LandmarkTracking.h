@@ -237,11 +237,14 @@ public:
 
 		image(faceROI).copyTo(face.frame_face_prev);
 		face.frameId += 1;
+		face.isCanShow = true;
+		
 		ncnn::Mat rnet_data = ncnn::Mat::from_pixels_resize(faceROI_Image.data, ncnn::Mat::PIXEL_BGR2RGB, faceROI_Image.cols, faceROI_Image.rows, 24, 24);
 		
 		float sim = detector->rnet(rnet_data);
-
-		face.isCanShow = true;
+		
+		//float sim = face.faceBbox.score;
+		
 		if (sim > 0.9) {
 			//stablize
 			float diff_x = 0;
