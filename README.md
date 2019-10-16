@@ -39,3 +39,11 @@ HyperFT项目的多人脸跟踪算法分三大部分：
 3、在tracking函数中修改doingLandmark_onet函数的调用
 
 4、通过人脸跟踪中Face类中的faceBbox即可获得人脸的位置及其五个人脸关键点（main.cpp）
+
+# 相关文章
+
+1、[快速目标跟踪方法总结](https://blog.csdn.net/study_all/article/details/102543500)
+
+2、[人脸跟踪开源项目HyperFT代码算法解析及改进](https://blog.csdn.net/study_all/article/details/102543847)
+
+3、[HyperFT项目安卓端的环境搭建及编译的图解教程](https://blog.csdn.net/study_all/article/details/102544113)
