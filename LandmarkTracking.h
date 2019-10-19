@@ -1,11 +1,35 @@
 #ifndef ZEUSEESFACETRACKING_H
 #define ZEUSEESFACETRACKING_H
-//#include <opencv2/opencv.hpp>
-//#include <thread>
+
+#include <opencv2/opencv.hpp>
 #include "mtcnn.h"
 #include "time.h"
 
+namespace Shape {
 
+	template <typename T> class Rect {
+	public:
+		Rect() {}
+		Rect(T x, T y, T w, T h) {
+			this->x = x;
+			this->y = y;
+			this->width = w;
+			height = h;
+
+		}
+		T x;
+		T y;
+		T width;
+		T height;
+
+		cv::Rect convert_cv_rect(int _height, int _width)
+		{
+			cv::Rect Rect_(static_cast<int>(x*_width), static_cast<int>(y*_height),
+				static_cast<int>(width*_width), static_cast<int>(height*_height));
+			return Rect_;
+		}
+	};
+}
 
 cv::Rect boundingRect(const std::vector<cv::Point>& pts) {
 	if (pts.size() > 1)
@@ -60,18 +84,18 @@ public:
 	bool isCanShow;
 	cv::Mat frame_face_prev;
 
-	static cv::Rect SquarePadding(cv::Rect facebox, int margin_rows, int margin_cols, bool max)
+	static cv::Rect SquarePadding(cv::Rect facebox, int margin_rows, int margin_cols, bool max_b)
 	{
 		int c_x = facebox.x + facebox.width / 2;
 		int c_y = facebox.y + facebox.height / 2;
 		int large = 0;
-		if (max)
-			large = std::max(facebox.height, facebox.width) / 2;
+		if (max_b)
+			large = max(facebox.height, facebox.width) / 2;
 		else
 			large = min(facebox.height, facebox.width) / 2;
 		cv::Rect rectNot(c_x - large, c_y - large, c_x + large, c_y + large);
-		rectNot.x = std::max(0, rectNot.x);
-		rectNot.y = std::max(0, rectNot.y);
+		rectNot.x = max(0, rectNot.x);
+		rectNot.y = max(0, rectNot.y);
 		rectNot.height = min(rectNot.height, margin_rows - 1);
 		rectNot.width = min(rectNot.width, margin_cols - 1);
 		if (rectNot.height - rectNot.y != rectNot.width - rectNot.x)
@@ -94,8 +118,8 @@ public:
 	}
 
 
-	vector<vector<cv::Point> > faceSequence;
-	vector<vector<float>> attitudeSequence;
+	std::vector<std::vector<cv::Point> > faceSequence;
+	std::vector<std::vector<float>> attitudeSequence;
 
 
 };
@@ -104,7 +128,7 @@ public:
 
 class FaceTracking {
 public:
-	FaceTracking(string modelPath)
+	FaceTracking(std::string modelPath)
 	{
 		this->detector = new MTCNN(modelPath);
 		downSimpilingFactor = 1;
@@ -297,7 +321,7 @@ public:
 			}
 			candidateFaces.clear();
 		}
-		for (vector<Face>::iterator iter = trackingFace.begin(); iter != trackingFace.end();)
+		for (std::vector<Face>::iterator iter = trackingFace.begin(); iter != trackingFace.end();)
 		{
 			if (!tracking(image, *iter))
 			{
@@ -335,7 +359,7 @@ public:
 
 
 
-	vector<Face> trackingFace; //跟踪中的人脸
+	std::vector<Face> trackingFace; //跟踪中的人脸
 	int UI_width;
 	int UI_height;
 
@@ -350,7 +374,7 @@ private:
 	int downSimpilingFactor;
 	int faceMinSize;
 	MTCNN* detector;
-	vector<Face> candidateFaces; // 将检测到的人脸放入此列队 待跟踪的人脸
+	std::vector<Face> candidateFaces; // 将检测到的人脸放入此列队 待跟踪的人脸
 	bool candidateFaces_lock;
 	double detection_Time;
 	double detection_Interval;

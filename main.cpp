@@ -96,7 +96,7 @@ private:
 int main()
 {
 
-	string model_path = "./models";
+	std::string model_path = "./models";
 	FaceTracking faceTrack(model_path);
 	cv::Mat frame;
 	cv::VideoCapture cap(0);
@@ -106,8 +106,8 @@ int main()
 	}
 
 	int frameIndex = 0;
-	vector<int> IDs;
-	vector<cv::Scalar> Colors;
+	std::vector<int> IDs;
+	std::vector<cv::Scalar> Colors;
 	cv::Scalar color;
 	srand((unsigned int)time(0));//初始化种子为随机值
 	Queue<cv::Mat> framesQueue;
