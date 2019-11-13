@@ -5,32 +5,6 @@
 #include "mtcnn.h"
 #include "time.h"
 
-namespace Shape {
-
-	template <typename T> class Rect {
-	public:
-		Rect() {}
-		Rect(T x, T y, T w, T h) {
-			this->x = x;
-			this->y = y;
-			this->width = w;
-			height = h;
-
-		}
-		T x;
-		T y;
-		T width;
-		T height;
-
-		cv::Rect convert_cv_rect(int _height, int _width)
-		{
-			cv::Rect Rect_(static_cast<int>(x*_width), static_cast<int>(y*_height),
-				static_cast<int>(width*_width), static_cast<int>(height*_height));
-			return Rect_;
-		}
-	};
-}
-
 cv::Rect boundingRect(const std::vector<cv::Point>& pts) {
 	if (pts.size() > 1)
 	{
@@ -61,10 +35,10 @@ cv::Rect boundingRect(const std::vector<cv::Point>& pts) {
 class Face {
 public:
 
-	Face(int instance_id, Shape::Rect<float> rect) {
+	Face(int instance_id, cv::Rect rect) {
 		face_id = instance_id;
 
-		face_location = rect;
+		loc = rect;
 		isCanShow = false; //追踪一次后待框稳定后即可显示
 		
 	}
@@ -75,12 +49,11 @@ public:
 	}
 
 	Bbox faceBbox;
-
+	cv::Rect loc;
 	int face_id = -1;
 	long frameId = 0;
 	int ptr_num = 0;
 
-	Shape::Rect<float> face_location;
 	bool isCanShow;
 	cv::Mat frame_face_prev;
 
@@ -131,7 +104,7 @@ public:
 	FaceTracking(std::string modelPath)
 	{
 		this->detector = new MTCNN(modelPath);
-		downSimpilingFactor = 1;
+
 		faceMinSize = 70;
 		this->detector->SetMinFace(faceMinSize);
 		detection_Time = -1;
@@ -158,12 +131,8 @@ public:
 			bbox[i] = cv::Rect(finalBbox[i].x1, finalBbox[i].y1, finalBbox[i].x2 - finalBbox[i].x1 + 1,
 				finalBbox[i].y2 - finalBbox[i].y1 + 1);
 			bbox[i] = Face::SquarePadding(bbox[i], image->rows, image->cols, true);
-			Shape::Rect<float> f_rect(bbox[i].x / static_cast<float>(image->cols),
-				bbox[i].y / static_cast<float>(image->rows),
-				bbox[i].width / static_cast<float>(image->cols),
-				bbox[i].height / static_cast<float>(image->rows)
-			);
-			std::shared_ptr<Face> face(new Face(trackingID, f_rect));
+			
+			std::shared_ptr<Face> face(new Face(trackingID, bbox[i]));
 			(*image)(bbox[i]).copyTo(face->frame_face_prev);
 
 			trackingID = trackingID + 1;
@@ -173,42 +142,19 @@ public:
 	}
 
 	void Init(cv::Mat& image) {
-		ImageHighDP = image;
-		cv::Size lowDpSize(ImageHighDP.cols / downSimpilingFactor, ImageHighDP.rows / downSimpilingFactor);
-		cv::resize(image, ImageLowDP, lowDpSize);
+		ImageHighDP = image.clone();
+
 		trackingID = 0;
-		detection_Interval = 350; //detect faces every 200 ms
+		detection_Interval = 200; //detect faces every 200 ms
 		detecting(&image);
 		stabilization = false;
-		UI_height = image.rows;
-		UI_width = image.cols;
+		
 	}
 
 	void doingLandmark_onet(cv::Mat& face, Bbox& faceBbox, int zeroadd_x, int zeroadd_y, int stable_state = 0) {
 		ncnn::Mat in = ncnn::Mat::from_pixels_resize(face.data, ncnn::Mat::PIXEL_BGR, face.cols, face.rows, 48, 48);
 		faceBbox = detector->onet(in, zeroadd_x, zeroadd_y, face.cols, face.rows);
-		/*
-		ncnn::Mat in = ncnn::Mat::from_pixels_resize(face.data, ncnn::Mat::PIXEL_BGR, face.cols, face.rows, 48, 48);
-		const float mean_vals[3] = { 127.5f, 127.5f, 127.5f };
-		const float norm_vals[3] = { 1.0 / 127.5, 1.0 / 127.5, 1.0 / 127.5 };
-		in.substract_mean_normalize(mean_vals, norm_vals);
-		ncnn::Extractor Onet = detector->Onet.create_extractor();
-		Onet.set_num_threads(2);
-		Onet.input("data", in);
-		ncnn::Mat score, bbox, keyPoint;
-		Onet.extract("prob1", score);
-		Onet.extract("conv6-2", bbox);
-		Onet.extract("conv6-3", keyPoint);
-		faceBbox.score = (float)score[1];
-		faceBbox.x1 = static_cast<int>(bbox[0] * face.cols) + zeroadd_x;
-		faceBbox.y1 = static_cast<int>(bbox[1] * face.rows) + zeroadd_y;
-		faceBbox.x2 = static_cast<int>(bbox[2] * face.cols) + face.cols + zeroadd_x;
-		faceBbox.y2 = static_cast<int>(bbox[3] * face.rows) + face.rows + zeroadd_y;
-		for (int num = 0; num<5; num++) {
-			(faceBbox.ppoint)[num] = zeroadd_x + face.cols * keyPoint[num];
-			(faceBbox.ppoint)[num + 5] = zeroadd_y + face.rows  * keyPoint[num + 5];
-		}
-		*/
+		
 	}
 
 
@@ -250,51 +196,52 @@ public:
 
 	bool tracking(cv::Mat& image, Face& face)
 	{
-		cv::Rect faceROI = face.face_location.convert_cv_rect(image.rows, image.cols);
+		cv::Rect faceROI = face.loc;
 		cv::Mat faceROI_Image;
 		tracking_corrfilter(image, face.frame_face_prev, faceROI, tpm_scale);
 		image(faceROI).copyTo(faceROI_Image);
 
-		cv::Rect bdbox;
 
 		doingLandmark_onet(faceROI_Image, face.faceBbox, faceROI.x, faceROI.y, face.frameId > 1);
 
-		bdbox.x = face.faceBbox.x1;
-		bdbox.y = face.faceBbox.y1;
-		bdbox.width = face.faceBbox.x2 - face.faceBbox.x1;
-		bdbox.height = face.faceBbox.y2 - face.faceBbox.y1;
-
-		bdbox = Face::SquarePadding(bdbox, static_cast<int>(bdbox.height * -0.05));
-		bdbox = Face::SquarePadding(bdbox, image.rows, image.cols, 1);
-
-		Shape::Rect<float> boxfloat(bdbox.x / static_cast<float>(image.cols),
-			bdbox.y / static_cast<float>(image.rows),
-			bdbox.width / static_cast<float>(image.cols),
-			bdbox.height / static_cast<float>(image.rows));
-
-		face.faceBbox.x1 = bdbox.x;
-		face.faceBbox.y1 = bdbox.y;
-		face.faceBbox.x2 = bdbox.x + bdbox.width;
-		face.faceBbox.y2 = bdbox.y + bdbox.height;
-
-
-		face.face_location = boxfloat;
-		faceROI = face.face_location.convert_cv_rect(image.rows, image.cols);
-
-		image(faceROI).copyTo(face.frame_face_prev);
-		face.frameId += 1;
-		face.isCanShow = true;
 		
-		ncnn::Mat rnet_data = ncnn::Mat::from_pixels_resize(faceROI_Image.data, ncnn::Mat::PIXEL_BGR2RGB, faceROI_Image.cols, faceROI_Image.rows, 24, 24);
 		
-		float sim = detector->rnet(rnet_data);
+		//ncnn::Mat rnet_data = ncnn::Mat::from_pixels_resize(faceROI_Image.data, ncnn::Mat::PIXEL_BGR2RGB, faceROI_Image.cols, faceROI_Image.rows, 24, 24);
 		
-		//float sim = face.faceBbox.score;
+		//float sim = detector->rnet(rnet_data);
 		
-		if (sim > 0.9) {
+		float sim = face.faceBbox.score;
+		
+		if (sim > 0.1) {
 			//stablize
-			float diff_x = 0;
-			float diff_y = 0;
+			//float diff_x = 0;
+			//float diff_y = 0;
+
+			cv::Rect bdbox;
+			bdbox.x = face.faceBbox.x1;
+			bdbox.y = face.faceBbox.y1;
+			bdbox.width = face.faceBbox.x2 - face.faceBbox.x1;
+			bdbox.height = face.faceBbox.y2 - face.faceBbox.y1;
+
+			bdbox = Face::SquarePadding(bdbox, static_cast<int>(bdbox.height * -0.05));
+			bdbox = Face::SquarePadding(bdbox, image.rows, image.cols, 1);
+
+
+
+
+			face.faceBbox.x1 = bdbox.x;
+			face.faceBbox.y1 = bdbox.y;
+			face.faceBbox.x2 = bdbox.x + bdbox.width;
+			face.faceBbox.y2 = bdbox.y + bdbox.height;
+
+
+			face.loc = bdbox;
+
+
+			image(bdbox).copyTo(face.frame_face_prev);
+			face.frameId += 1;
+			face.isCanShow = true;
+
 			return true;
 		}
 		return false;
@@ -311,7 +258,7 @@ public:
 
 	void update(cv::Mat& image)
 	{
-		ImageHighDP = image;
+		ImageHighDP = image.clone();
 		//std::cout << trackingFace.size() << std::endl;
 		if (candidateFaces.size() > 0 && !candidateFaces_lock)
 		{
@@ -340,18 +287,15 @@ public:
 			double diff = (double)(cv::getTickCount() - detection_Time) * 1000 / cv::getTickFrequency();
 			if (diff > detection_Interval)
 			{
-				cv::Size lowDpSize(ImageHighDP.cols / downSimpilingFactor, ImageHighDP.rows / downSimpilingFactor);
-				cv::resize(image, ImageLowDP, lowDpSize);
+				
 				//set Mask to protect the tracking face not to be detected.
 				for (auto& face : trackingFace)
 				{
-					Shape::Rect<float> rect = face.face_location;
-					cv::Rect rect1 = rect.convert_cv_rect(ImageLowDP.rows, ImageLowDP.cols);
-					setMask(ImageLowDP, rect1);
+					setMask(ImageHighDP, face.loc);
 				}
 				detection_Time = (double)cv::getTickCount();
 				// do detection in thread
-				detecting(&ImageLowDP);
+				detecting(&ImageHighDP);
 			}
 
 		}
@@ -360,18 +304,16 @@ public:
 
 
 	std::vector<Face> trackingFace; //跟踪中的人脸
-	int UI_width;
-	int UI_height;
 
 
 private:
 
-	int isLostDetection;
-	int isTracking;
-	int isDetection;
+	//int isLostDetection;
+	//int isTracking;
+	//int isDetection;
 	cv::Mat ImageHighDP;
-	cv::Mat ImageLowDP;
-	int downSimpilingFactor;
+	//cv::Mat ImageLowDP;
+	//int downSimpilingFactor;
 	int faceMinSize;
 	MTCNN* detector;
 	std::vector<Face> candidateFaces; // 将检测到的人脸放入此列队 待跟踪的人脸

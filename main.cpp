@@ -1,5 +1,6 @@
 #include "LandmarkTracking.h"
 
+#undef CV_CXX11
 
 #ifdef CV_CXX11
 #include <mutex>
@@ -110,12 +111,12 @@ int main()
 	std::vector<cv::Scalar> Colors;
 	cv::Scalar color;
 	srand((unsigned int)time(0));//初始化种子为随机值
-	Queue<cv::Mat> framesQueue;
+	
 	std::vector<Face> faces;
 
 #ifdef CV_CXX11
 	bool process = true;
-
+	Queue<cv::Mat> framesQueue;
 	Queue<std::vector<Face> > predictionsQueue;
 	std::thread processingThread([&]() {
 		//std::queue<AsyncArray> futureOutputs;
