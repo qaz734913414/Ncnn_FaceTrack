@@ -526,11 +526,12 @@ void MTCNN::SmoothBbox(std::vector<Bbox>& finalBbox)
 	static std::vector<Bbox> preBbox_;
 	for (int i = 0; i < finalBbox.size(); i++) {
 		for (int j = 0; j < preBbox_.size(); j++) {
-			if (iou(finalBbox[i], preBbox_[j]) > 0.90)
-			{
-				finalBbox[i] = preBbox_[j];
-			}
-			else if (iou(finalBbox[i], preBbox_[j]) > 0.6) {
+			//if (iou(finalBbox[i], preBbox_[j]) > 0.90)
+			//{
+			//	finalBbox[i] = preBbox_[j];
+			//}
+			//else if (iou(finalBbox[i], preBbox_[j]) > 0.6) {
+			if (iou(finalBbox[i], preBbox_[j]) > 0.85) {
 				finalBbox[i].x1 = (finalBbox[i].x1 + preBbox_[j].x1) / 2;
 				finalBbox[i].y1 = (finalBbox[i].y1 + preBbox_[j].y1) / 2;
 				finalBbox[i].x2 = (finalBbox[i].x2 + preBbox_[j].x2) / 2;
