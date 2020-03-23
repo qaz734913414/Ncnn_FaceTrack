@@ -1,10 +1,11 @@
 # Ncnn_FaceTrack
 
-基于mtcnn人脸检测+onet人脸跟踪
+基于mtcnn人脸检测+onet人脸跟踪,在i7-9700k的cpu检测速度可高达250fps
 
 # 开发环境
 
 win7
+
 vs2015
 
 
@@ -34,7 +35,7 @@ HyperFT项目的多人脸跟踪算法分三大部分：
 
 1、在HyperFT项目中的Face类中仅定义了人脸矩形的变量，如若需要加入五个关键点的跟踪则需要在Face类中需要定义一个Bbox类faceBbox，这样Face即能保存人脸位置又能保存人脸关键点。
 
-2、在原来的doingLandmark_onet函数的基础上重载函数，将传入的std::vector<cv::Point> &pts改为传入Bbox& faceBbox。
+2、在原来的doingLandmark_onet函数的基础上重载函数，将传入的std::vector< cv::Point > &pts改为传入Bbox& faceBbox。
 
 3、在tracking函数中修改doingLandmark_onet函数的调用
 
